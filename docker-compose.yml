@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  bot:
+    build: .
+    environment:
+      - DISCORD_TOKEN
+      - GOOGLE_KEY
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+    links:
+      - db
+  db:
+    restart: always
+    image: postgres
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+    ports:
+      - "5432:5432"
