@@ -1,7 +1,11 @@
 package main
 
-import "github.com/bwmarrin/discordgo"
-import "time"
+import (
+	"log"
+	"time"
+
+	"github.com/bwmarrin/discordgo"
+)
 
 const (
 	// CommandPrefix is the prefix for commands
@@ -23,17 +27,53 @@ type CommandCallback func(s *discordgo.Session, event *discordgo.MessageCreate, 
 // Command stores information related to a command
 type Command struct {
 	name        string
+	description string
 	subcommands []Command
 	aliases     []string
+	adminOnly   bool
 	callback    CommandCallback
 }
 
 // Call will check for subcommands and call their callbacks or call this command's callback
 func (c *Command) Call(s *discordgo.Session, event *discordgo.MessageCreate, args []string) {
 	if OnCooldown {
-		// TODO: send some message about spam or something
-		s.ChannelMessageSend(event.ChannelID, "On cooldown")
+		Reply(s, event.Message, "On cooldown.")
 		return
+	}
+
+	if c.adminOnly {
+		channel, err := s.Channel(event.ChannelID)
+		if err != nil {
+			log.Println("Couldn't find message channel.")
+			return
+		}
+
+		member, err := s.GuildMember(channel.GuildID, event.Message.Author.ID)
+		if err != nil {
+			log.Println("Couldn't find guild member.")
+			return
+		}
+
+		isAdmin := false
+
+		for _, memberRole := range member.Roles {
+			role, err := s.State.Role(channel.GuildID, memberRole)
+			if err != nil {
+				log.Println(err)
+			}
+
+			if role.Permissions&discordgo.PermissionAdministrator != 0 {
+				if memberRole == role.ID {
+					isAdmin = true
+					break
+				}
+			}
+		}
+
+		if !isAdmin {
+			Reply(s, event.Message, "You don't have permission to use this command.")
+			return
+		}
 	}
 
 	for _, subcommand := range c.subcommands {
@@ -59,13 +99,20 @@ func (c *Command) Call(s *discordgo.Session, event *discordgo.MessageCreate, arg
 		OnCooldown = false
 	}()
 
-	c.callback(s, event, args)
+	go c.callback(s, event, args)
 }
 
 // NewCommand creates a command
-func NewCommand(name string, aliases []string, subcommands []Command, callback CommandCallback) Command {
+func NewCommand(name string,
+	description string,
+	adminOnly bool,
+	aliases []string,
+	subcommands []Command,
+	callback CommandCallback) Command {
 	return Command{
 		name:        name,
+		description: description,
+		adminOnly:   adminOnly,
 		aliases:     aliases,
 		subcommands: subcommands,
 		callback:    callback,

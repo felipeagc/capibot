@@ -1,84 +1,53 @@
 package main
 
 import (
+	"errors"
 	"io"
-	"log"
+	"sort"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
 	"github.com/otium/ytdl"
 )
 
-// Join the message author's voice channel
-func Join(s *discordgo.Session, msg *discordgo.Message) {
-	channel, err := s.State.Channel(msg.ChannelID)
-	if err != nil {
-		// Could not find channel
-		return
-	}
-
-	g, err := s.State.Guild(channel.GuildID)
-	if err != nil {
-		// Could not find guild
-		return
-	}
-
-	for _, vs := range g.VoiceStates {
-		if vs.UserID == msg.Author.ID {
-			instance := GetInstance(vs.GuildID)
-			if instance.VoiceConnection != nil {
-				instance.VoiceConnection.ChangeChannel(vs.ChannelID, false, true)
-			} else {
-				vc, err := s.ChannelVoiceJoin(vs.GuildID, vs.ChannelID, false, true)
-				if err != nil {
-					// Error joining voice channel
-				}
-				instance.VoiceConnection = vc
-			}
+// JoinVoice the message author's voice channel
+func (i *Instance) JoinVoice(s *discordgo.Session, channelID string) error {
+	if i.VoiceConnection != nil {
+		err := i.VoiceConnection.ChangeChannel(channelID, false, true)
+		if err != nil {
+			return err
 		}
+	} else {
+		vc, err := s.ChannelVoiceJoin(i.GuildID, channelID, false, true)
+		if err != nil {
+			// Error joining voice channel
+			return err
+		}
+		i.VoiceConnection = vc
 	}
+
+	return nil
 }
 
-// Leave the voice channel in this server
-func Leave(s *discordgo.Session, msg *discordgo.Message) {
-	channel, err := s.State.Channel(msg.ChannelID)
-	if err != nil {
-		// Could not find channel
-		return
-	}
-
-	g, err := s.State.Guild(channel.GuildID)
-	if err != nil {
-		// Could not find guild
-		return
-	}
-
-	vc := GetInstance(g.ID).VoiceConnection
+// LeaveVoice the voice channel in this server
+func (i *Instance) LeaveVoice() error {
+	vc := i.VoiceConnection
 	if vc == nil {
-		return
+		return nil
 	}
 
-	vc.Disconnect()
-	GetInstance(g.ID).VoiceConnection = nil
+	err := vc.Disconnect()
+	if err != nil {
+		return err
+	}
+	i.VoiceConnection = nil
+
+	return nil
 }
 
-// PlayVideo plays a youtube video from a url if the bot is in a voice channel in the specified guild
-func PlayVideo(s *discordgo.Session, msg *discordgo.Message, url string) {
-	channel, err := s.State.Channel(msg.ChannelID)
-	if err != nil {
-		// Could not find channel
-		log.Fatal(err)
-		return
-	}
-
-	g, err := s.State.Guild(channel.GuildID)
-	if err != nil {
-		// Could not find guild
-		log.Fatal(err)
-		return
-	}
-
-	vc := GetInstance(g.ID).VoiceConnection
+// PlayItem plays a youtube video from a url if the bot is in a voice channel in the specified guild
+func (i *Instance) PlayItem(url string) {
+	vc := i.VoiceConnection
 	if vc == nil {
 		return
 	}
@@ -100,21 +69,68 @@ func PlayVideo(s *discordgo.Session, msg *discordgo.Message, url string) {
 		// Handle the error
 	}
 
-	encodingSession, err := dca.EncodeFile(downloadURL.String(), options)
+	i.EncodingSession, err = dca.EncodeFile(downloadURL.String(), options)
 	if err != nil {
 		// Handle the error
 	}
-	defer encodingSession.Cleanup()
+	defer i.EncodingSession.Cleanup()
 
 	done := make(chan error)
-	session := dca.NewStream(encodingSession, vc, done)
-	GetInstance(g.ID).StreamingSession = session
+	session := dca.NewStream(i.EncodingSession, vc, done)
+	i.StreamingSession = session
 	err = <-done
 
-	GetInstance(g.ID).StreamingSession = nil
-	log.Println("Finished item")
+	i.EncodingSession = nil
+	i.StreamingSession = nil
+
+	if i.AutoPlay {
+		i.TryToPlayNext()
+	}
 
 	if err != nil && err != io.EOF {
 		// Handle the error
 	}
+}
+
+// IsCurrentlyPlaying returns whether there's audio playing in the instance.
+func (i *Instance) IsCurrentlyPlaying() bool {
+	return i.StreamingSession != nil || i.EncodingSession != nil
+}
+
+// StopCurrentItem stops the currently playing playlist item.
+func (i *Instance) StopCurrentItem() {
+	if i.IsCurrentlyPlaying() {
+		i.StreamingSession.SetPaused(true)
+		i.EncodingSession.Stop()
+		i.StreamingSession = nil
+		i.EncodingSession = nil
+	}
+}
+
+// TryToPlayNext checks if there is any item currently playing
+// If not, then play the next one in the list.
+func (i *Instance) TryToPlayNext() (*PlaylistItem, error) {
+	if i.IsCurrentlyPlaying() {
+		return nil, errors.New("Already playing a playlist item")
+	}
+
+	playlistItems := make(playlistItemSlice, 0)
+	if err := DB.Where(map[string]interface{}{"played": false}).Find(&playlistItems).Error; err != nil {
+		return nil, errors.New("Couldn't find a playlist item to play next")
+	}
+
+	if len(playlistItems) <= 0 {
+		return nil, errors.New("Playlist is empty")
+	}
+
+	sort.Sort(playlistItems)
+	playlistItem := playlistItems[0]
+
+	playlistItem.Played = true
+
+	DB.Save(&playlistItem)
+
+	go i.PlayItem(playlistItem.URL)
+
+	return &playlistItem, nil
 }
