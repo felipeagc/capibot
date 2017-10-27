@@ -2,7 +2,7 @@ version: '3'
 
 services:
   bot:
-    build: .
+    build: ./bot/
     environment:
       - DISCORD_TOKEN
       - GOOGLE_KEY

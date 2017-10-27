@@ -14,8 +14,7 @@ Create a `.env` file at the root of this repo and add the following environment 
  - `POSTGRES_PASSWORD`
  - `POSTGRES_DB`
  
-Use the following commands to run the bot:
+Use the following command to run the bot:
 ```
-dep ensure
 docker-compose up --build
 ```
