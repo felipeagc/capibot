@@ -322,7 +322,6 @@ var (
 
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 	log.Println("Bot is ready.")
-	go ServerConnectionListener()
 }
 
 func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
@@ -447,6 +446,9 @@ func main() {
 		log.Fatalln("Error opening Discord session,", err)
 	}
 	defer dg.Close()
+
+	// Wait for guilds to come in so we can register them
+	go GuildCreationListener()
 
 	log.Println("Bot now running. Press CTRL-C to close.")
 	sc := make(chan os.Signal, 1)

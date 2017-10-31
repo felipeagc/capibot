@@ -12,9 +12,11 @@ import (
 var (
 	// Instances is an array of registered instances
 	Instances = make([]Instance, 0)
+	// NewGuilds is a channel used for streaming new guilds into a loop for them to be registered
 	NewGuilds = make(chan GuildData)
 )
 
+// GuildData is a struct for passing information into the NewGuilds channel
 type GuildData struct {
 	Session *discordgo.Session
 	Event   *discordgo.GuildCreate
@@ -60,7 +62,8 @@ func GetInstanceFromMessage(s *discordgo.Session, msg *discordgo.Message) (*Inst
 	return instance, nil
 }
 
-func ServerConnectionListener() {
+// GuildCreationListener runs a loop to receive data from a channel to register new guilds
+func GuildCreationListener() {
 	for {
 		guildEventData := <-NewGuilds
 		s := guildEventData.Session
