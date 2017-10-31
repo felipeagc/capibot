@@ -77,6 +77,7 @@ func (i *Instance) PlayItem(url string) {
 	if err != nil {
 		// Handle the error
 	}
+	defer i.EncodingSession.Cleanup()
 
 	done := make(chan error)
 	session := dca.NewStream(i.EncodingSession, vc, done)
@@ -93,8 +94,6 @@ func (i *Instance) PlayItem(url string) {
 	if err != nil && err != io.EOF {
 		// Handle the error
 	}
-
-	i.EncodingSession.Cleanup()
 }
 
 // IsCurrentlyPlaying returns whether there's audio playing in the instance.
