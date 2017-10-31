@@ -208,6 +208,10 @@ var (
 			sort.Sort(playlistItems)
 
 			if len(args) == 0 {
+				if len(playlistItems) <= 0 {
+					Reply(s, event.Message, "Playlist is empty")
+					return
+				}
 				replyText := "Playlist: \n"
 				for i, item := range playlistItems {
 					replyText += strconv.Itoa(i+1) + ". " + item.Title + "\n"
@@ -318,39 +322,11 @@ var (
 
 func ready(s *discordgo.Session, event *discordgo.Ready) {
 	log.Println("Bot is ready.")
+	go ServerConnectionListener()
 }
 
 func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
-	instance, err := RegisterInstance(s, event.Guild.ID)
-	if err != nil {
-		log.Println("Failed to create guild")
-		return
-	}
-
-	log.Printf("Created guild %s", event.Guild.ID)
-
-	for _, channel := range event.Guild.Channels {
-		if channel.Type == discordgo.ChannelTypeGuildVoice {
-			lower := strings.ToLower(channel.Name)
-			words := []string{
-				"music",
-				"dj",
-				"song",
-				"bot",
-				"sound",
-			}
-			for _, word := range words {
-				if strings.Contains(lower, word) {
-					err := instance.JoinVoice(s, channel.ID)
-					if err != nil {
-						log.Println(err)
-					}
-					return
-				}
-			}
-		}
-
-	}
+	NewGuilds <- GuildData{Event: event, Session: s}
 }
 
 func guildMemberAdd(s *discordgo.Session, event *discordgo.GuildMemberAdd) {

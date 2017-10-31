@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"log"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/jonas747/dca"
@@ -10,7 +12,13 @@ import (
 var (
 	// Instances is an array of registered instances
 	Instances = make([]Instance, 0)
+	NewGuilds = make(chan GuildData)
 )
+
+type GuildData struct {
+	Session *discordgo.Session
+	Event   *discordgo.GuildCreate
+}
 
 // Instance represents a discord server
 type Instance struct {
@@ -50,6 +58,43 @@ func GetInstanceFromMessage(s *discordgo.Session, msg *discordgo.Message) (*Inst
 	}
 
 	return instance, nil
+}
+
+func ServerConnectionListener() {
+	for {
+		guildEventData := <-NewGuilds
+		s := guildEventData.Session
+		event := guildEventData.Event
+		instance, err := RegisterInstance(s, event.Guild.ID)
+		if err != nil {
+			log.Println("Failed to create guild")
+			continue
+		}
+
+		log.Printf("Created guild %s", event.Guild.ID)
+
+		for _, channel := range event.Guild.Channels {
+			if channel.Type == discordgo.ChannelTypeGuildVoice {
+				lower := strings.ToLower(channel.Name)
+				words := []string{
+					"music",
+					"dj",
+					"song",
+					"bot",
+					"sound",
+				}
+				for _, word := range words {
+					if strings.Contains(lower, word) {
+						err := instance.JoinVoice(s, channel.ID)
+						if err != nil {
+							log.Println(err)
+						}
+						break
+					}
+				}
+			}
+		}
+	}
 }
 
 // RegisterInstance will create and register an instance if it doesn't exist yet
