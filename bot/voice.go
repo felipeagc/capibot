@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"io"
-	"log"
 	"sort"
 
 	"github.com/bwmarrin/discordgo"
@@ -19,14 +18,11 @@ func (i *Instance) JoinVoice(s *discordgo.Session, channelID string) error {
 			return err
 		}
 	} else {
-		log.Println("aaa")
 		vc, err := s.ChannelVoiceJoin(i.GuildID, channelID, false, true)
 		if err != nil {
-			log.Println("bbb")
 			// Error joining voice channel
 			return err
 		}
-		log.Println("ccc")
 		i.VoiceConnection = vc
 	}
 
