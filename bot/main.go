@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/url"
 	"os"
 	"os/signal"
@@ -53,7 +54,10 @@ var (
 					if err != nil {
 						log.Println(err)
 					}
-					instance.JoinVoice(s, vs.ChannelID)
+					err = instance.JoinVoice(s, vs.ChannelID)
+					if err != nil {
+						log.Println(err)
+					}
 				}
 			}
 		})
@@ -69,7 +73,10 @@ var (
 				log.Println(err)
 				return
 			}
-			instance.LeaveVoice()
+			err = instance.LeaveVoice()
+			if err != nil {
+				log.Println(err)
+			}
 		})
 
 	pauseCommand = NewCommand("pause",
@@ -264,6 +271,49 @@ var (
 				instance.TryToPlayNext()
 			}
 		})
+
+	hypeCommand = NewCommand("hype",
+		"HYPE",
+		false,
+		[]string{},
+		[]Command{},
+		func(s *discordgo.Session, event *discordgo.MessageCreate, args []string) {
+			instance, err := GetInstanceFromMessage(s, event.Message)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			playlistItems := make(playlistItemSlice, 0)
+			DB.Where(map[string]interface{}{"played": false}).Find(&playlistItems)
+			sort.Sort(playlistItems)
+
+			urls := []string{
+				"https://www.youtube.com/watch?v=ETfiUYij5UE",
+				"https://www.youtube.com/watch?v=3pGfF3PN3_Y",
+				"https://www.youtube.com/watch?v=wyz_2DEah4o",
+			}
+
+			rand.Seed(time.Now().Unix())
+			n := rand.Int() % len(urls)
+
+			youtubeResult, err := YoutubeGetInfo(urls[n])
+			if err != nil {
+				log.Printf("Failed to get youtube info for: %s", args[0])
+				return
+			}
+
+			err = AddToPlaylist(s, event.Message, *youtubeResult)
+
+			if err != nil {
+				Reply(s, event.Message, "Error adding playlist item.")
+				return
+			}
+
+			if len(playlistItems) <= 0 {
+				instance.TryToPlayNext()
+			}
+		})
 )
 
 func ready(s *discordgo.Session, event *discordgo.Ready) {
@@ -291,7 +341,10 @@ func guildCreate(s *discordgo.Session, event *discordgo.GuildCreate) {
 			}
 			for _, word := range words {
 				if strings.Contains(lower, word) {
-					instance.JoinVoice(s, channel.ID)
+					err := instance.JoinVoice(s, channel.ID)
+					if err != nil {
+						log.Println(err)
+					}
 					return
 				}
 			}
@@ -356,13 +409,19 @@ func messageCreate(s *discordgo.Session, event *discordgo.MessageCreate) {
 	commandName := strings.TrimPrefix(args[0], CommandPrefix)
 	args = args[1:]
 
+	i, err := GetInstanceFromMessage(s, event.Message)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	for _, command := range Commands {
 		if command.name == commandName {
-			command.Call(s, event, args)
+			command.Call(i, s, event, args)
 		} else {
 			for _, alias := range command.aliases {
 				if alias == commandName {
-					command.Call(s, event, args)
+					command.Call(i, s, event, args)
 				}
 			}
 		}
@@ -394,6 +453,7 @@ func main() {
 	RegisterCommand(joinCommand)
 	RegisterCommand(leaveCommand)
 	RegisterCommand(playCommand)
+	RegisterCommand(hypeCommand)
 
 	dg, err := discordgo.New("Bot " + discordToken)
 	if err != nil {

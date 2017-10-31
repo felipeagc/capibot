@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"io"
+	"log"
 	"sort"
 
 	"github.com/bwmarrin/discordgo"
@@ -18,11 +19,14 @@ func (i *Instance) JoinVoice(s *discordgo.Session, channelID string) error {
 			return err
 		}
 	} else {
+		log.Println("aaa")
 		vc, err := s.ChannelVoiceJoin(i.GuildID, channelID, false, true)
 		if err != nil {
+			log.Println("bbb")
 			// Error joining voice channel
 			return err
 		}
+		log.Println("ccc")
 		i.VoiceConnection = vc
 	}
 
@@ -33,7 +37,7 @@ func (i *Instance) JoinVoice(s *discordgo.Session, channelID string) error {
 func (i *Instance) LeaveVoice() error {
 	vc := i.VoiceConnection
 	if vc == nil {
-		return nil
+		return errors.New("Not in a voice channel")
 	}
 
 	err := vc.Disconnect()
@@ -73,7 +77,6 @@ func (i *Instance) PlayItem(url string) {
 	if err != nil {
 		// Handle the error
 	}
-	defer i.EncodingSession.Cleanup()
 
 	done := make(chan error)
 	session := dca.NewStream(i.EncodingSession, vc, done)
@@ -90,6 +93,8 @@ func (i *Instance) PlayItem(url string) {
 	if err != nil && err != io.EOF {
 		// Handle the error
 	}
+
+	i.EncodingSession.Cleanup()
 }
 
 // IsCurrentlyPlaying returns whether there's audio playing in the instance.

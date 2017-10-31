@@ -17,8 +17,6 @@ const (
 var (
 	// Commands is a slice of the registered commands
 	Commands []Command
-	// OnCooldown is true if command execution is temporarily blocked to avoid spam
-	OnCooldown bool
 )
 
 // CommandCallback is the type of a command callback
@@ -35,8 +33,8 @@ type Command struct {
 }
 
 // Call will check for subcommands and call their callbacks or call this command's callback
-func (c *Command) Call(s *discordgo.Session, event *discordgo.MessageCreate, args []string) {
-	if OnCooldown {
+func (c *Command) Call(i *Instance, s *discordgo.Session, event *discordgo.MessageCreate, args []string) {
+	if i.CommandsOnCooldown {
 		Reply(s, event.Message, "On cooldown.")
 		return
 	}
@@ -79,27 +77,27 @@ func (c *Command) Call(s *discordgo.Session, event *discordgo.MessageCreate, arg
 	for _, subcommand := range c.subcommands {
 		if len(args) > 0 {
 			if args[0] == subcommand.name {
-				subcommand.Call(s, event, args[1:])
+				subcommand.Call(i, s, event, args[1:])
 				return
 			}
 
 			for _, alias := range subcommand.aliases {
 				if alias == args[0] {
-					subcommand.Call(s, event, args[1:])
+					subcommand.Call(i, s, event, args[1:])
 					return
 				}
 			}
 		}
 	}
 
-	OnCooldown = true
+	i.CommandsOnCooldown = true
 
 	go func() {
 		time.Sleep(CommandCooldown * time.Second)
-		OnCooldown = false
+		i.CommandsOnCooldown = false
 	}()
 
-	go c.callback(s, event, args)
+	c.callback(s, event, args)
 }
 
 // NewCommand creates a command

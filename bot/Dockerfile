@@ -13,5 +13,5 @@ RUN dep ensure -vendor-only
 
 COPY . .
 
-RUN go build -o capibot .
+RUN go build -race -o capibot .
 CMD ["./capibot"]

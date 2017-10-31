@@ -19,6 +19,8 @@ type Instance struct {
 	VoiceConnection  *discordgo.VoiceConnection
 	StreamingSession *dca.StreamingSession
 	EncodingSession  *dca.EncodeSession
+	// CommandsOnCooldown is true if command execution is temporarily blocked to avoid spam
+	CommandsOnCooldown bool
 }
 
 // GetInstance gets an instance from a guild ID
@@ -86,14 +88,13 @@ func RegisterInstance(s *discordgo.Session, guildID string) (*Instance, error) {
 		DB.Save(&user)
 	}
 
-	instance := Instance{
-		GuildID:          guildID,
-		AutoPlay:         true,
-		VoiceConnection:  nil,
-		StreamingSession: nil,
-	}
-
-	Instances = append(Instances, instance)
+	Instances = append(Instances, Instance{
+		GuildID:            guildID,
+		AutoPlay:           true,
+		VoiceConnection:    nil,
+		StreamingSession:   nil,
+		CommandsOnCooldown: false,
+	})
 
 	i, err := GetInstance(guildID)
 	if err != nil {
