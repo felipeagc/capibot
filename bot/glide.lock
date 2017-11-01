@@ -1,0 +1,48 @@
+hash: 1d3fb71d2a861fcf677036c7ef63066870d8c71800da05df21f328a8abc0c0cc
+updated: 2017-11-01T15:46:55.637319025-02:00
+imports:
+- name: github.com/andybalholm/cascadia
+  version: 349dd0209470eabd9514242c688c403c0926d266
+- name: github.com/bwmarrin/discordgo
+  version: 2fda7ce223a66a5b70b66987c22c3c94d022ee66
+- name: github.com/gorilla/websocket
+  version: 71fa72d4842364bc5f74185f4161e0099ea3624a
+- name: github.com/jinzhu/gorm
+  version: 5174cc5c242a728b435ea2be8a2f7f998e15429b
+  subpackages:
+  - dialects/postgres
+- name: github.com/jinzhu/inflection
+  version: 1c35d901db3da928c72a72d8458480cc9ade058f
+- name: github.com/jonas747/dca
+  version: 01f9985f4a26c29c2b4f5a7c133395e1aa6fffca
+- name: github.com/jonas747/ogg
+  version: b4f6f4cf3757a3bf88eae9222045b99b9d76d8ca
+- name: github.com/lib/pq
+  version: b609790bd85edf8e9ab7e0f8912750a786177bcf
+  subpackages:
+  - hstore
+  - oid
+- name: github.com/otium/ytdl
+  version: bd30f781270fa4d6df59e2a49948cd157030a2c6
+- name: github.com/PuerkitoBio/goquery
+  version: 1a71cc719d0d5b9e4f14ae072bef08b576b0bab5
+- name: github.com/Sirupsen/logrus
+  version: 89742aefa4b206dcf400792f3bd35b542998eb3b
+- name: golang.org/x/crypto
+  version: bd6f299fb381e4c3393d1c4b1f0b94f5e77650c8
+  subpackages:
+  - nacl/secretbox
+  - poly1305
+  - salsa20/salsa
+  - ssh/terminal
+- name: golang.org/x/net
+  version: c73622c77280266305273cb545f54516ced95b93
+  subpackages:
+  - html
+  - html/atom
+- name: golang.org/x/sys
+  version: 95c6576299259db960f6c5b9b69ea52422860fce
+  subpackages:
+  - unix
+  - windows
+testImports: []

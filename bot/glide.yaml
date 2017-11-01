@@ -1,0 +1,11 @@
+package: github.com/felipeagc/capibot/bot
+import:
+- package: github.com/bwmarrin/discordgo
+  version: ^0.17.0
+- package: github.com/jinzhu/gorm
+  version: ^1.0.0
+  subpackages:
+  - dialects/postgres
+- package: github.com/jonas747/dca
+- package: github.com/otium/ytdl
+  version: ^0.5.1

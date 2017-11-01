@@ -2,14 +2,13 @@ FROM golang:1.9.1-stretch
 
 RUN apt-get update
 RUN apt-get install -y ffmpeg
-
-RUN go get -u github.com/golang/dep/...
+RUN apt-get install -y golang-glide
 
 WORKDIR /go/src/app
 
-COPY Gopkg.toml Gopkg.lock ./
+COPY glide.yaml ./
 
-RUN dep ensure -vendor-only
+RUN glide install
 
 COPY . .
 

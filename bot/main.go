@@ -73,6 +73,7 @@ var (
 				log.Println(err)
 				return
 			}
+
 			err = instance.LeaveVoice()
 			if err != nil {
 				log.Println(err)
